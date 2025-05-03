@@ -6,6 +6,7 @@ class Budget:
         """
         Здесь должен быть докстринг.
         """
+        
         self.db_path = db_path
 
     def add_expense(self, expense, category, amount, date):
@@ -19,16 +20,36 @@ class Budget:
             date (str): Дата траты в формате 'YYYY-MM-DD'
             
         Возвращает:
-            None
-        """
-        with conn_sqlite(self.db_path) as conn:
-            cursor = conn.cursor()
-            query = """
-            INSERT INTO expenses (expense, category, amount, date)
-            VALUES (?, ?, ?, ?)
-            """
-            cursor.execute(query, (expense, category, amount, date))
-            conn.commit()
+            successsCode (bin): код выполнения)
+        """         
+
+        maxDaysLengths = {0:31, 1:30, 2:29}
+
+        successCode = 0
+        
+        dateTemp = date.split(sep='.')
+        if len(dateTemp) == 2:
+            day = dateTemp[0]
+            month = dateTemp[1]
+            if amount.isdigit():
+                if day.isdigit() and month.isdigit() and int(month) in range(1, 13):
+                    month = int(month)
+                    day = int(day)
+                    if day <= maxDaysLengths[(month % 2) + ((month / 2 == 1) * 2)]:
+                        date = str(day).zfill(2) + '.' + str(month).zfill(2)
+                        with conn_sqlite(self.db_path) as conn:
+                            cursor = conn.cursor()
+                            query = """
+                            INSERT INTO budget (expense, category, amount, date)
+                            VALUES (?, ?, ?, ?)
+                            """
+                            cursor.execute(query, (expense, category, amount, date))
+                            conn.commit()
+                            successCode = 2
+            else:
+                successCode = 1
+
+        return successCode
 
     def get_the_most_expensive_category(self, date):
         """
@@ -46,7 +67,7 @@ class Budget:
             cursor = conn.cursor()
             query = """
             SELECT category, SUM(amount) as total_amount
-            FROM expenses
+            FROM budget
             WHERE date = ?
             GROUP BY category
             ORDER BY total_amount DESC
@@ -74,7 +95,7 @@ class Budget:
             cursor = conn.cursor()
             query = """
             SELECT expense, amount, date
-            FROM expenses
+            FROM budget
             WHERE category = ? AND date = ?
             ORDER BY amount DESC
             LIMIT 1
@@ -85,4 +106,3 @@ class Budget:
 
 if __name__ == "__main__":
     budget = Budget()
-    budget.add_expense(1,1,1,1)
