@@ -4,7 +4,7 @@ from constants import DB_PATH
 from utils import conn_sqlite
 
 
-def populate_table_with_fixtures():
+def populate_table_with_fixtures(db_path):
     """
     Здесь должен быть докстринг, описывающий функцию.
     """
@@ -26,7 +26,7 @@ def populate_table_with_fixtures():
         {'expense': 'Поездка на природу', 'category': 'Развлечения', 'amount': 8000.00, 'date': '20.04'},
     ]
 
-    with conn_sqlite(DB_PATH) as conn:
+    with conn_sqlite(db_path) as conn:
         cursor = conn.cursor()
         for fixture in fixtures:
             cursor.execute('''
@@ -37,14 +37,20 @@ def populate_table_with_fixtures():
     print('Таблица успешно наполнена фикстурными данными!')
 
 
-def create_db_and_table():
+def create_db_and_table(db_path: str, overwrite: bool = False):
     """
     Здесь должен быть докстринг, описывающий функцию.
     """
-    if not os.path.exists(DB_PATH):
-        print(f'Файл базы данных {DB_PATH} не существует. Создаем...')
-        with conn_sqlite(DB_PATH) as conn:
+    exists = os.path.exists(db_path)
+    if not exists or overwrite:
+        if not exists:
+            print(f'Файл базы данных {db_path} не существует. Создаем...')
+        elif overwrite:
+            print(f'Файл базы данных {db_path} уже существует. Перезаписываю...')
+        with conn_sqlite(db_path) as conn:
             cursor = conn.cursor()
+            if exists and overwrite:
+                cursor.execute('DROP TABLE budget;')
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS budget (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,13 +58,15 @@ def create_db_and_table():
                     category TEXT,
                     amount REAL,
                     date DATE
-                )
+                    )
             ''')
+            
             conn.commit()
-            populate_table_with_fixtures()
-        print('База данных и таблица "budget" успешно созданы!')
+            populate_table_with_fixtures(db_path)
+            
+            print(f'База данных и таблица "{db_path}" успешно созданы!')
     else:
-        print(f'Файл базы данных {DB_PATH} уже существует.')
+        print(f'Файл базы данных {db_path} уже существует.')
 
 
 def main():
