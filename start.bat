@@ -1,3 +1,3 @@
-@cd C:\Users\exopo\OneDrive\Desktop\osiris
+@cd %CD%
 commands_handler.py
 @cmd /k
