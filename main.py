@@ -60,10 +60,12 @@ async def add_expense(request: AddExpenseRequestModel, response: Response):
         2: 'Трата добавлена успешно'
     }
 
+    response_result = 'SUCCESS'
     if success_code != 2:
+        response_result = 'FAILURE'
         response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    return {'message': success_messages[success_code]}
+    return {'result': response_result, 'message': success_messages[success_code]}
 
 
 # Эедпоинт возвращает самую затратную категорию за указанную дату
