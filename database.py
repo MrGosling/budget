@@ -4,7 +4,7 @@ from constants import DB_PATH
 from utils import conn_sqlite
 
 
-def populate_table_with_fixtures(db_path):
+def populate_table_with_fixtures():
     """
     Здесь должен быть докстринг, описывающий функцию.
     """
@@ -26,33 +26,39 @@ def populate_table_with_fixtures(db_path):
         {'expense': 'Поездка на природу', 'category': 'Развлечения', 'amount': 8000.00, 'date': '20.04'},
     ]
 
-    with conn_sqlite(db_path) as conn:
+    with conn_sqlite(DB_PATH) as conn:
         cursor = conn.cursor()
         for fixture in fixtures:
             cursor.execute('''
-                INSERT INTO budget (expense, category, amount, date)
+                INSERT INTO database (expense, category, amount, date)
                 VALUES (?, ?, ?, ?)
             ''', (fixture['expense'], fixture['category'], fixture['amount'], fixture['date']))
         conn.commit()
     print('Таблица успешно наполнена фикстурными данными!')
 
 
-def create_db_and_table(db_path: str, overwrite: bool = False):
+def create_db_and_table(command: str):
     """
     Здесь должен быть докстринг, описывающий функцию.
     """
-    exists = os.path.exists(db_path)
-    if not exists or overwrite:
+    
+    exists = os.path.exists(DB_PATH)
+    
+    overwrite = command == 'rewrite'
+    create = command == 'create'
+    delete = command == 'delete'
+    
+    if (not exists or overwrite) and (create or overwrite):
         if not exists:
-            print(f'Файл базы данных {db_path} не существует. Создаем...')
+            print(f'Файл базы данных не существует. Создаем...')
         elif overwrite:
-            print(f'Файл базы данных {db_path} уже существует. Перезаписываю...')
-        with conn_sqlite(db_path) as conn:
+            print(f'Файл базы данных уже существует. Перезаписываю...')
+        with conn_sqlite(DB_PATH) as conn:
             cursor = conn.cursor()
             if exists and overwrite:
-                cursor.execute('DROP TABLE budget;')
+                cursor.execute('DROP TABLE database;')
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS budget (
+                CREATE TABLE IF NOT EXISTS database (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     expense TEXT,
                     category TEXT,
@@ -62,11 +68,17 @@ def create_db_and_table(db_path: str, overwrite: bool = False):
             ''')
             
             conn.commit()
-            populate_table_with_fixtures(db_path)
+            populate_table_with_fixtures()
             
-            print(f'База данных и таблица "{db_path}" успешно созданы!')
+            print(f'База данных и таблица успешно созданы!')
+    elif delete:
+        try:
+            os.remove(DB_PATH)
+            print('База данных удалена.')
+        except:
+            print('Базы данных не найдено.')
     else:
-        print(f'Файл базы данных {db_path} уже существует.')
+        print(f'Файл базы данных уже существует.')
 
 
 def main():
