@@ -173,4 +173,5 @@ cython_debug/
 # ignoring .db files
 *.db
 
-.env
+.env 
+*.sqlite

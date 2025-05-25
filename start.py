@@ -6,7 +6,6 @@ startInfo = lambda: print('Type "help" for help\n')
 startInfo()
 
 def clear():
-    os.system('cls')
     startInfo()
 
 try:
