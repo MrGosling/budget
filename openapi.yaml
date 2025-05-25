@@ -3,24 +3,14 @@ info:
   title: Expense Tracker API
   description: API для отслеживания расходов с аналитикой
   version: 1.0.0
-  contact:
-    name: The Best Team
-    email: email@example.com
 servers:
   - url: http://127.0.0.1:8000
     description: Локальный сервер разработки
-tags:
-  - name: System
-    description: Системные endpoints
-  - name: Expenses
-    description: Управление расходами
-  - name: Analytics
-    description: Аналитика расходов
+
 
 paths:
   /:
     get:
-      tags: [System]
       summary: Корневой endpoint
       description: Возвращает приветственное сообщение
       responses:
@@ -34,7 +24,6 @@ paths:
 
   /healthcheck:
     get:
-      tags: [System]
       summary: Проверка состояния сервиса
       description: Возвращает статус работы сервиса
       responses:
@@ -48,7 +37,6 @@ paths:
 
   /help:
     get:
-      tags: [System]
       summary: Список доступных команд
       description: Возвращает список всех доступных эндпоинтов API
       responses:
@@ -62,15 +50,17 @@ paths:
 
   /add:
     post:
-      tags: [Expenses]
       summary: Добавить новый расход
       description: Добавляет запись о новом расходе в систему
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/AddExpenseRequestModel'
+            example:
+              expense: string,
+              category: string
+              amount: string
+              date: string
       responses:
         '200':
           description: Расход успешно добавлен
@@ -83,12 +73,15 @@ paths:
           description: Ошибка валидации
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                    loc: [string, 0]
+                    msg: string
+                    type: string
+
 
   /most_expensive_category/{date}:
     get:
-      tags: [Analytics]
       summary: Самая затратная категория
       description: Возвращает категорию с наибольшими расходами за указанную дату
       parameters:
@@ -111,12 +104,14 @@ paths:
           description: Ошибка валидации
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+              example:
+                detail:
+                    loc: [string, 0]
+                    msg: string
+                    type: string
 
   /most_expensive_purchase/{category}/{date}:
     get:
-      tags: [Analytics]
       summary: Самая дорогая покупка
       description: Возвращает самую дорогую покупку в указанной категории за дату
       parameters:
@@ -141,60 +136,13 @@ paths:
             application/json:
               schema:
                 type: string
-                example: "Молоко - 150 руб."
+                example: Молоко - 150 руб.
         '422':
           description: Ошибка валидации
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-
-components:
-  schemas:
-    AddExpenseRequestModel:
-      type: object
-      required:
-        - expense
-        - category
-        - amount
-        - date
-      properties:
-        expense:
-          type: string
-          description: Наименование расхода
-          example: "Покупка продуктов"
-        category:
-          type: string
-          description: Категория расхода
-          example: "Продукты"
-        amount:
-          type: string
-          description: Сумма расхода
-          example: "1500.50"
-        date:
-          type: string
-          description: Дата расхода (YYYY-MM-DD)
-          example: "2023-11-15"
-
-    HTTPValidationError:
-      type: object
-      properties:
-        detail:
-          type: array
-          items:
-            $ref: '#/components/schemas/ValidationError'
-
-    ValidationError:
-      type: object
-      properties:
-        loc:
-          type: array
-          items:
-            type: string
-          example: ["body", "amount"]
-        msg:
-          type: string
-          example: "value is not a valid float"
-        type:
-          type: string
-          example: "type_error.float"
+              example:
+                detail:
+                    loc: [string, 0]
+                    msg: string
+                    type: string
