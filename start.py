@@ -1,16 +1,16 @@
 import commands_handler
 import os
 
+
 startInfo = lambda: print('Type "help" for help\n')                        
                          
 startInfo()
 
 def clear():
-    os.system('cls')
     startInfo()
 
-try:
-    while True:
+while True:
+    try:
         inp = input('> ')
         match(inp):
             case 'exit':
@@ -24,7 +24,7 @@ try:
                 print ("\033[A                             \033[A")
             case _:
                 commands_handler.commands_handler(inp)
-except Exception as ex:
-    print(ex, '\n')
+    except Exception as ex:
+        print(ex, '\n')
 
 input('\nВведите, чтобы продолжить...')
