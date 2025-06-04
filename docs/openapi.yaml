@@ -46,7 +46,7 @@ paths:
             application/json:
               schema:
                 type: string
-                example: "Доступные команды: /expenses/add, /expenses/most_expensive_category, /expenses/most_expensive_purchase"
+                example: "Доступные команды: /v1/expenses, /v1/expenses/{date}, /v1/expenses/{category}/{date}"
 
   /v1/expenses:
     post:
