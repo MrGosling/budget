@@ -22,7 +22,7 @@ paths:
                 type: string
                 example: "Добро пожаловать в Expense Tracker API"
 
-  /healthcheck:
+  /v1/healthcheck:
     get:
       summary: Проверка состояния сервиса
       description: Возвращает статус работы сервиса
@@ -35,7 +35,7 @@ paths:
                 type: string
                 example: "OK"
 
-  /help:
+  /v1/help:
     get:
       summary: Список доступных команд
       description: Возвращает список всех доступных эндпоинтов API
@@ -48,7 +48,7 @@ paths:
                 type: string
                 example: "Доступные команды: /expenses/add, /expenses/most_expensive_category, /expenses/most_expensive_purchase"
 
-  /expenses/add:
+  /v1/expenses:
     post:
       summary: Добавить новый расход
       description: Добавляет запись о новом расходе в систему
@@ -80,7 +80,7 @@ paths:
                     type: string
 
 
-  /expenses/most_expensive_category/{date}:
+  /v1/expenses/{date}:
     get:
       summary: Самая затратная категория
       description: Возвращает категорию с наибольшими расходами за указанную дату
@@ -110,7 +110,7 @@ paths:
                     msg: string
                     type: string
 
-  /expenses/most_expensive_purchase/{category}/{date}:
+  /v1/expenses/{category}/{date}:
     get:
       summary: Самая дорогая покупка
       description: Возвращает самую дорогую покупку в указанной категории за дату
