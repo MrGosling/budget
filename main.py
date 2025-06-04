@@ -26,9 +26,9 @@ async def help_list():
     """Выводит список доступных команд."""
     return {
         'commands': [
-            {'method': 'POST', 'path': '/add', 'description': 'Добавить трату'},
-            {'method': 'GET', 'path': '/most_expensive_category/{date}', 'description': 'Самая затратная категория'},
-            {'method': 'GET', 'path': '/most_expensive_purchase/{category}/{date}',
+            {'method': 'POST', 'path': '/expenses/add', 'description': 'Добавить трату'},
+            {'method': 'GET', 'path': '/expenses/most_expensive_category/{date}', 'description': 'Самая затратная категория'},
+            {'method': 'GET', 'path': '/expenses/most_expensive_purchase/{category}/{date}',
              'description': 'Самая дорогая покупка'},
             {'method': 'GET', 'path': '/help', 'description': 'Справка по API'}
         ]
@@ -44,7 +44,7 @@ class AddExpenseRequestModel(BaseModel):
 
 
 # Эндпоинт для добавления трат
-@app.post('/add')
+@app.post('/expenses/add')
 async def add_expense(request: AddExpenseRequestModel, response: Response):
     """Добавляет новую трату."""
     success_code = budget.add_expense(
@@ -69,7 +69,7 @@ async def add_expense(request: AddExpenseRequestModel, response: Response):
 
 
 # Эедпоинт возвращает самую затратную категорию за указанную дату
-@app.get('/most_expensive_category/{date}')
+@app.get('/expenses/most_expensive_category/{date}')
 async def most_expensive_category(date: str, response: Response):
     """Возвращает самую затратную категорию за указанную дату."""
     result = budget.get_the_most_expensive_category(date)
@@ -81,7 +81,7 @@ async def most_expensive_category(date: str, response: Response):
 
 
 # Эндпоинт возвращает самую дорогую попкупку в указанной категории за указанную дату
-@app.get('/most_expensive_purchase/{category}/{date}')
+@app.get('/expenses/most_expensive_purchase/{category}/{date}')
 async def most_expensive_purchase(category: str, date: str, response: Response):
     """Возвращает самую дорогую покупку в категории за указанную дату."""
     result = budget.get_the_most_expensive_purchase(category, date)
