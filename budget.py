@@ -17,7 +17,7 @@ class Budget:
             expense (str): Наименование траты
             category (str): Категория траты
             amount (float): Сумма траты
-            date (str): Дата траты в формате 'YYYY-MM-DD'
+            date (str): Дата траты в формате 'day.month'
             
         Возвращает:
             successsCode (bin): код выполнения)
@@ -40,7 +40,7 @@ class Budget:
                         with conn_sqlite(self.db_path) as conn:
                             cursor = conn.cursor()
                             query = """
-                            INSERT INTO budget (expense, category, amount, date)
+                            INSERT INTO database (expense, category, amount, date)
                             VALUES (?, ?, ?, ?)
                             """
                             cursor.execute(query, (expense, category, amount, date))
@@ -56,7 +56,7 @@ class Budget:
         Возвращает категорию с наибольшими тратами за указанную дату.
         
         Параметры:
-            date (str): Дата в формате 'YYYY-MM-DD'
+            date (str): Дата в формате 'day.month'
             
         Возвращает:
             dict: Словарь с ключами 'category' и 'total_amount', 
@@ -67,8 +67,8 @@ class Budget:
             cursor = conn.cursor()
             query = """
             SELECT category, SUM(amount) as total_amount
-            FROM budget
-            WHERE date = ?
+            FROM database
+            WHERE (substr(date,4,5)) = ?
             GROUP BY category
             ORDER BY total_amount DESC
             LIMIT 1
@@ -78,13 +78,13 @@ class Budget:
             return dict(result) if result else None
 
 
-    def get_the_most_expensive_purchase(self, category, date):
+    def get_the_most_expensive_purchase(self, category, month):
         """
         Возвращает самую дорогую покупку в указанной категории за указанную дату.
         
         Параметры:
             category (str): Название категории
-            date (str): Дата в формате 'YYYY-MM-DD'
+            date (str): Дата в формате 'day.month'
             
         Возвращает:
             dict: Словарь с ключами 'expense', 'amount' и 'date',
@@ -95,12 +95,12 @@ class Budget:
             cursor = conn.cursor()
             query = """
             SELECT expense, amount, date
-            FROM budget
-            WHERE category = ? AND date = ?
+            FROM database
+            WHERE category = ? AND (substr(date,4,5)) = ?
             ORDER BY amount DESC
             LIMIT 1
             """
-            cursor.execute(query, (category, date))
+            cursor.execute(query, (category, month))
             result = cursor.fetchone()
             return dict(result) if result else None
 

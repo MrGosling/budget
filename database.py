@@ -30,35 +30,55 @@ def populate_table_with_fixtures():
         cursor = conn.cursor()
         for fixture in fixtures:
             cursor.execute('''
-                INSERT INTO budget (expense, category, amount, date)
+                INSERT INTO database (expense, category, amount, date)
                 VALUES (?, ?, ?, ?)
             ''', (fixture['expense'], fixture['category'], fixture['amount'], fixture['date']))
         conn.commit()
     print('Таблица успешно наполнена фикстурными данными!')
 
 
-def create_db_and_table():
+def create_db_and_table(command: str):
     """
     Здесь должен быть докстринг, описывающий функцию.
     """
-    if not os.path.exists(DB_PATH):
-        print(f'Файл базы данных {DB_PATH} не существует. Создаем...')
+    
+    exists = os.path.exists(DB_PATH)
+    
+    overwrite = command == 'rewrite'
+    create = command == 'create'
+    delete = command == 'delete'
+    
+    if (not exists or overwrite) and (create or overwrite):
+        if not exists:
+            print(f'Файл базы данных не существует. Создаем...')
+        elif overwrite:
+            print(f'Файл базы данных уже существует. Перезаписываю...')
         with conn_sqlite(DB_PATH) as conn:
             cursor = conn.cursor()
+            if exists and overwrite:
+                cursor.execute('DROP TABLE database;')
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS budget (
+                CREATE TABLE IF NOT EXISTS database (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     expense TEXT,
                     category TEXT,
                     amount REAL,
                     date DATE
-                )
+                    )
             ''')
+            
             conn.commit()
             populate_table_with_fixtures()
-        print('База данных и таблица "budget" успешно созданы!')
+            
+            print(f'База данных и таблица успешно созданы!')
+    elif delete:
+        try:
+            os.remove(DB_PATH)
+            print('База данных удалена.')
+        except:
+            print('Базы данных не найдено.')
     else:
-        print(f'Файл базы данных {DB_PATH} уже существует.')
+        print(f'Файл базы данных уже существует.')
 
 
 def main():
