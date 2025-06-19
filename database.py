@@ -6,7 +6,7 @@ from utils import conn_sqlite
 
 def populate_table_with_fixtures():
     """
-    Здесь должен быть докстринг, описывающий функцию.
+    Заполнение таблицы фикстурными данными
     """
     fixtures = [
         {'expense': 'Оплата аренды', 'category': 'Жилье', 'amount': 15000.00, 'date': '01.01'},
@@ -39,7 +39,7 @@ def populate_table_with_fixtures():
 
 def create_db_and_table(command: str):
     """
-    Здесь должен быть докстринг, описывающий функцию.
+    Создание базы данных с таблицой
     """
     
     exists = os.path.exists(DB_PATH)

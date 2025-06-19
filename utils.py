@@ -7,7 +7,7 @@ from contextlib import contextmanager
 @contextmanager
 def conn_sqlite(db_path: str):
     """
-    Здесь должен быть докстринг, описывающий функцию.
+    чето от григория, делает чето важное
     """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -19,7 +19,7 @@ def conn_sqlite(db_path: str):
 
 def load_environ() -> None:
     """
-    Здесь должен быть докстринг, описывающий функцию.
+    тоже чет важное и от григория
     """
     try:
         env_path = Path('.') / '.env'
