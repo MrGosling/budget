@@ -1,31 +1,14 @@
-import os
-from pathlib import Path
-import sqlite3
-from contextlib import contextmanager
+from pymongo import MongoClient
+from constants import MONGO_URI, DB_NAME, COLLECTION_NAME
 
 
-@contextmanager
-def conn_sqlite(db_path: str):
+def get_mongo_collection():
     """
-    Здесь должен быть докстринг, описывающий функцию.
-    """
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()
+    Возвращает коллекцию MongoDB, подключаясь по MONGO_URI.
 
-
-def load_environ() -> None:
+    Возвращает:
+        pymongo.collection.Collection: коллекция MongoDB
     """
-    Здесь должен быть докстринг, описывающий функцию.
-    """
-    try:
-        env_path = Path('.') / '.env'
-        with open(env_path) as file:
-            for line in file:
-                key, value = line.strip().split('=')
-                os.environ[key] = value
-    except FileNotFoundError:
-        print('File not found!')
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    return db[COLLECTION_NAME]
