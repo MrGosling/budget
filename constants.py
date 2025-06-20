@@ -1,7 +1,3 @@
-import os
-
-from utils import load_environ
-
-load_environ()
-
-DB_PATH = os.getenv(key='DB_PATH')
+DB_NAME = 'budget_db'
+MONGO_URI = 'mongodb://localhost:27017'
+COLLECTION_NAME = 'expenses'
