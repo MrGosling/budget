@@ -1,13 +1,13 @@
 import os
-from budget import Budget
 import database
-from constants import DB_NAME
+
+from budget import Budget
 from utils import get_mongo_collection
 
 
 def commands_handler(input_data):
     temp = ''
-    argsList = []
+    args_list = []
     string_closed = True
 
     for symbol_id in range(len(input_data)):
@@ -15,17 +15,19 @@ def commands_handler(input_data):
         if symbol in ('"', "'"):
             string_closed = not string_closed
         elif symbol == ' ' and string_closed:
-            argsList.append(temp)
+            args_list.append(temp)
             temp = ''
         else:
             temp += symbol
 
     if temp != '':
-        argsList.append(temp)
+        args_list.append(temp)
 
-    lenArgsList = len(argsList)
 
-    def printHelp():
+    len_args_list = len(args_list)
+
+
+    def print_help():
         print('Commands handler usage:\n'
               '\t"help" - вывести это сообщение\n'
               '\t"add" - Добавить трату\n'
@@ -35,27 +37,31 @@ def commands_handler(input_data):
               '\t"cls" - очистить консоль\n'
               '\t"exit" - выйти из программы\n')
 
-    def printWrongArgs(commandArgsCount: int):
+
+    def print_wrong_args(commandArgsCount: int):
         word = 'arguments' if commandArgsCount > 1 else 'argument'
         print(f'Wrong input: command takes {commandArgsCount} {word}\n'
-              f'Instead {lenArgsList - 1} was given')
+              f'Instead {len_args_list - 1} was given')
+
 
     budget = Budget()
+
 
     def db_exists():
         """Проверка существования коллекции (MongoDB не требует файла как SQLite)."""
         collection = get_mongo_collection()
         return collection.estimated_document_count() > 0
 
-    if argsList[0] != '':
-        match argsList[0]:
+
+    if args_list[0] != '':
+        match args_list[0]:
             case 'add':
-                match lenArgsList:
+                match len_args_list:
                     case 1:
                         print('"add" command takes 4 arguments: '
                               'expense, category, amount, date')
                     case 5:
-                        expense, category, amount, date = argsList[1:]
+                        expense, category, amount, date = args_list[1:]
                         if db_exists():
                             successCode = budget.add_expense(expense, category, amount, date)
                             successMessages = {
@@ -67,14 +73,14 @@ def commands_handler(input_data):
                         else:
                             print("База пуста. Выполните команду 'db create' или 'db rewrite'")
                     case _:
-                        printWrongArgs(4)
+                        print_wrong_args(4)
 
             case 'most_expensive_category':
-                match lenArgsList:
+                match len_args_list:
                     case 1:
                         print('"most_expensive_category" command takes 1 argument: month')
                     case 2:
-                        month = argsList[1]
+                        month = args_list[1]
                         if month.isdigit() and 1 <= int(month) <= 12:
                             month = str(int(month)).zfill(2)
                             if db_exists():
@@ -89,15 +95,15 @@ def commands_handler(input_data):
                         else:
                             print('Некорректный аргумент: месяц должен быть от 1 до 12')
                     case _:
-                        printWrongArgs(1)
+                        print_wrong_args(1)
 
             case 'most_expensive_purchase':
-                match lenArgsList:
+                match len_args_list:
                     case 1:
                         print('"most_expensive_purchase" command takes 2 arguments: '
                               'category, month')
                     case 3:
-                        category, month = argsList[1:]
+                        category, month = args_list[1:]
                         if month.isdigit() and 1 <= int(month) <= 12:
                             month = str(int(month)).zfill(2)
                             if db_exists():
@@ -113,19 +119,19 @@ def commands_handler(input_data):
                         else:
                             print('Некорректный аргумент: месяц должен быть от 1 до 12')
                     case _:
-                        printWrongArgs(2)
+                        print_wrong_args(2)
 
             case 'db':
-                match lenArgsList:
+                match len_args_list:
                     case 1:
                         print('"db" command takes 1 argument: [create | delete | rewrite]')
                     case 2:
-                        database.create_db_and_collection(argsList[1])
+                        database.create_db_and_collection(args_list[1])
                     case _:
-                        printWrongArgs(1)
+                        print_wrong_args(1)
 
             case 'help':
-                printHelp()
+                print_help()
 
             case 'cls':
                 os.system('cls' if os.name == 'nt' else 'clear')
@@ -137,4 +143,4 @@ def commands_handler(input_data):
             case _:
                 print('Неизвестная команда. Введите "help" для справки.')
     else:
-        printHelp()
+        print_help()
