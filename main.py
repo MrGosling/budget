@@ -1,101 +1,165 @@
-from fastapi import FastAPI, Response, status
-import uvicorn
-from pydantic import BaseModel
+import json
+import re
+
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote, urlparse
 
 from budget import Budget
 
-app = FastAPI()
-budget = Budget()
 
+class BudgetHandler(BaseHTTPRequestHandler):
+    budget = Budget()
 
-@app.get('/')
-async def read_root():
-    """Рутовая заглушка"""
-    return {'result': 'SUCCESS', 'text': 'Wellcome to the budget service!'}
+    def _send_json(self, data, status=200):
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        # Преобразуем словарь или список в JSON, иначе оборачиваем в {"message": ...}
+        if isinstance(data, (dict, list)):
+            output = json.dumps(data, ensure_ascii=False)
+        else:
+            output = json.dumps({"message": data}, ensure_ascii=False)
+        self.wfile.write(output.encode('utf-8'))
 
+    def do_GET(self):
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
 
-@app.get('/healthcheck')
-async def get_healthcheck():
-    """Возвращает сообщение о статусе сервиса"""
-    return {'result': 'SUCCESS', 'text': 'OK'}
+        if path == '/':
+            self._send_json("Добро пожаловать в Expense Tracker API")
+            return
 
+        if path == '/api/v1/healthcheck':
+            self._send_json("OK")
+            return
 
-# Возвращает список эндпоинтов сервиса
-@app.get('/v1/help')
-async def help_list():
-    """Выводит список доступных команд."""
-    return {
-        'commands': [
-            {'method': 'POST', 'path': '/v1/expenses', 'description': 'Добавить трату'},
-            {'method': 'GET', 'path': '/v1/expenses/{date}', 'description': 'Самая затратная категория'},
-            {'method': 'GET', 'path': '/v1/expenses/{category}/{date}',
-             'description': 'Самая дорогая покупка'},
-            {'method': 'GET', 'path': '/v1/help', 'description': 'Справка по API'}
-        ]
-    }
+        if path == '/api/v1/help':
+            help_text = {
+                "commands": [
+                    "/api/v1/expenses [POST] - добавить расход",
+                    "/api/v1/expenses/max_category/{month} [GET] - "
+                    "самая затратная категория за месяц",
+                    "/api/v1/expenses/{category}/max/{month} [GET] - "
+                    "самая дорогая покупка в категории за месяц"
+                ]
+            }
+            self._send_json(help_text)
+            return
 
+        # /api/v1/expenses/max_category/{month}
+        m = re.match(r'^/api/v1/expenses/max_category/(\d{1,2})$', path)
+        if m:
+            month = m.group(1)
+            if not month.isdigit() or not (1 <= int(month) <= 12):
+                self._send_json(
+                    {
+                        "detail": {
+                            "loc": ["path", 0],
+                            "msg": "Некорректный месяц",
+                            "type": "value_error",
+                        }
+                    },
+                    status=422,
+                )
+                return
+            month_str = str(int(month)).zfill(2)
+            result = self.budget.get_the_most_expensive_category(month_str)
+            if result is None:
+                self._send_json(
+                    {"message": "Данные за этот месяц не найдены"}, status=404
+                )
+            else:
+                self._send_json(result)
+            return
 
-# Форма запроса для add
-class AddExpenseRequestModel(BaseModel):
-    expense: str
-    category: str
-    amount: str
-    date: str
+        # /api/v1/expenses/{category}/max/{month}
+        m = re.match(r'^/api/v1/expenses/([^/]+)/max/(\d{1,2})$', path)
+        if m:
+            category_encoded, month = m.group(1), m.group(2)
+            category = unquote(category_encoded)
+            if not month.isdigit() or not (1 <= int(month) <= 12):
+                self._send_json(
+                    {
+                        "detail": {
+                            "loc": ["path", 0],
+                            "msg": "Некорректный месяц",
+                            "type": "value_error",
+                        }
+                    },
+                    status=422,
+                )
+                return
+            month_str = str(int(month)).zfill(2)
+            result = self.budget.get_the_most_expensive_purchase(category, month_str)
+            if result is None:
+                self._send_json(
+                    {"message": "Данные за этот месяц и категорию не найдены"},
+                    status=404,
+                )
+            else:
+                self._send_json(result)
+            return
 
+        self.send_error(404, "Not Found")
 
-# Эндпоинт для добавления трат
-@app.post('/v1/expenses')
-async def add_expense(request: AddExpenseRequestModel, response: Response):
-    """Добавляет новую трату."""
-    success_code = budget.add_expense(
-        request.expense,
-        request.category,
-        request.amount,
-        request.date
-    )
+    def do_POST(self):
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
 
-    success_messages = {
-        0: 'Ошибка: неправильный тип даты. (должно быть "[день].[месяц]")',
-        1: 'Ошибка: неправильная цена. (должна быть числом)',
-        2: 'Трата добавлена успешно'
-    }
+        if path == '/api/v1/expenses':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            try:
+                data = json.loads(body)
+            except Exception:
+                self._send_json(
+                    {
+                        "detail": {
+                            "loc": ["body", 0],
+                            "msg": "Некорректный JSON",
+                            "type": "value_error",
+                        }
+                    },
+                    status=422,
+                )
+                return
 
-    response_result = 'SUCCESS'
-    if success_code != 2:
-        response_result = 'FAILURE'
-        response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+            required_fields = ("expense", "category", "amount", "date")
+            if not all(k in data for k in required_fields):
+                self._send_json(
+                    {
+                        "detail": {
+                            "loc": ["body", 0],
+                            "msg": "Отсутствуют обязательные поля",
+                            "type": "value_error",
+                        }
+                    },
+                    status=422,
+                )
+                return
 
-    return {'result': response_result, 'message': success_messages[success_code]}
+            expense = data["expense"]
+            category = data["category"]
+            amount = data["amount"]
+            date = data["date"]
 
+            # Вызываем метод add_expense из Budget
+            success_code = self.budget.add_expense(expense, category, amount, date)
+            messages = {
+                0: "Ошибка: неверный формат даты или день превышает допустимый",
+                1: "Ошибка: сумма должна быть числом",
+                2: "Трата успешно добавлена",
+            }
+            status = 200 if success_code == 2 else 422
+            self._send_json({"message": messages.get(success_code, "Неизвестная ошибка")}, status=status)
+            return
 
-# Эедпоинт возвращает самую затратную категорию за указанную дату
-@app.get('/v1/expenses/{date}')
-async def most_expensive_category(date: str, response: Response):
-    """Возвращает самую затратную категорию за указанную дату."""
-    result = budget.get_the_most_expensive_category(date)
-    response_result = 'SUCCESS'
-    if not result:
-        response_result = 'FAILURE'
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return {'result': response_result, 'category': result, 'date': date}
-
-
-# Эндпоинт возвращает самую дорогую попкупку в указанной категории за указанную дату
-@app.get('/v1/expenses/{category}/{date}')
-async def most_expensive_purchase(category: str, date: str, response: Response):
-    """Возвращает самую дорогую покупку в категории за указанную дату."""
-    result = budget.get_the_most_expensive_purchase(category, date)
-    response_result = 'SUCCESS'
-    if not result:
-        response_result = 'FAILURE'
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return {'result': response_result, 'purchase': result, 'category': category, 'date': date}
+        self.send_error(404, "Not Found")
 
 
 if __name__ == '__main__':
-    uvicorn.run(
-        'main:app',
-        host='127.0.0.1',
-        port=8787,
-        reload=True
-    )
+    host = '0.0.0.0'
+    port = 8000
+    server = ThreadingHTTPServer((host, port), BudgetHandler)
+    print(f"Server running at http://{host}:{port}")
+    server.serve_forever()
