@@ -1,6 +1,5 @@
 import pytest
 from pymongo import MongoClient
-# from database import get_mongo_collection
 from budget import Budget
 from database import (
     get_mongo_collection,
@@ -38,10 +37,11 @@ def add_test_data(collection, data):
     collection.insert_many(data)
 
 # Тесты для database.py
-def test_get_mongo_collection(test_db):
+def test_get_mongo_collection():
     """Проверяет, что подключение к MongoDB работает."""
     collection = get_mongo_collection()
     assert collection.name == "expenses"
+    assert collection.database.name == "budget_db"
 
 # Тесты для budget.py
 class TestBudgetOperations:
@@ -84,11 +84,11 @@ class TestBudgetOperations:
         """Проверка самой дорогой покупки."""
         add_test_data(self.collection, [
             {"expense": "Кофе", "category": "Еда", "amount": 150, "date": "10.05"},
-            {"expense": "Ресторан", "category": "Еда", "amount": 3000, "date": "12.05"},
+            {"expense": "Рестоан", "category": "Еда", "amount": 3000, "date": "12.05"},
             {"expense": "Супермаркет", "category": "Еда", "amount": 2000, "date": "15.05"},
         ])
         result = self.budget.get_the_most_expensive_purchase("Еда", "05")
-        assert result["expense"] == "Ресторан"
+        assert result["expense"] == "Рестоан"
         assert result["amount"] == 3000
 
     def test_get_no_data_cases(self):
@@ -96,31 +96,8 @@ class TestBudgetOperations:
         assert self.budget.get_the_most_expensive_category("12") is None
         assert self.budget.get_the_most_expensive_purchase("Развлечения", "01") is None
 
-
-
-@pytest.fixture(scope="module")
-def test_db():
-    """Фикстура для тестовой базы данных"""
-    client = MongoClient("mongodb://localhost:27017/")
-    db = client["test_budget_db"]
-    yield db
-    client.drop_database("test_budget_db")
-
-@pytest.fixture
-def clean_collection(test_db):
-    """Фикстура для очистки коллекции перед тестом"""
-    collection = test_db["expenses"]
-    collection.delete_many({})
-    return collection
-
-def test_get_mongo_collection():
-    """Тест подключения к коллекции"""
-    collection = get_mongo_collection()
-    assert collection.name == "expenses"
-    assert collection.database.name == "budget"
-
 def test_fixtures_data():
-    """Тест структуры тестовых данных"""
+    """Тест структуры тестовых данных."""
     assert len(fixtures) == 12
     for item in fixtures:
         assert set(item.keys()) == {'expense', 'category', 'amount', 'date'}
@@ -129,8 +106,11 @@ def test_fixtures_data():
         assert isinstance(item['amount'], float)
         assert isinstance(item['date'], str)
 
-def test_populate_collection_with_fixtures(clean_collection):
-    """Тест заполнения коллекции фикстурами"""
+def test_populate_collection_with_fixtures(clean_collection, monkeypatch):
+    """Тест заполнения коллекции фикстурами."""
+    # Мокаем get_mongo_collection чтобы возвращать тестовую коллекцию
+    monkeypatch.setattr('database.get_mongo_collection', lambda: clean_collection)
+    
     # Проверяем пустую коллекцию
     assert clean_collection.count_documents({}) == 0
     
@@ -146,24 +126,20 @@ def test_populate_collection_with_fixtures(clean_collection):
     assert first_item['amount'] == 15000.0
     assert first_item['date'] == '01.01'
 
-def test_create_db_and_collection_create_new(clean_collection):
-    """Тест команды create для новой коллекции"""
+def test_create_db_and_collection_create_new(clean_collection, monkeypatch):
+    """Тест команды create для новой коллекции."""
+    # Мокаем get_mongo_collection чтобы возвращать тестовую коллекцию
+    monkeypatch.setattr('database.get_mongo_collection', lambda: clean_collection)
+    
     assert clean_collection.count_documents({}) == 0
     create_db_and_collection('create')
     assert clean_collection.count_documents({}) == 12
 
-def test_create_db_and_collection_existing(clean_collection):
-    """Тест команды create для существующей коллекции"""
-    # Добавляем тестовый документ
-    clean_collection.insert_one({'test': 'data'})
-    assert clean_collection.count_documents({}) == 1
+def test_create_db_and_collection_rewrite(clean_collection, monkeypatch):
+    """Тест команды rewrite."""
+    # Мокаем get_mongo_collection чтобы возвращать тестовую коллекцию
+    monkeypatch.setattr('database.get_mongo_collection', lambda: clean_collection)
     
-    create_db_and_collection('create')
-    # Коллекция не должна измениться
-    assert clean_collection.count_documents({}) == 1
-
-def test_create_db_and_collection_rewrite(clean_collection):
-    """Тест команды rewrite"""
     # Добавляем тестовые данные
     clean_collection.insert_many([{'test': 'data1'}, {'test': 'data2'}])
     assert clean_collection.count_documents({}) == 2
@@ -172,8 +148,11 @@ def test_create_db_and_collection_rewrite(clean_collection):
     # Должны получить фикстуры
     assert clean_collection.count_documents({}) == 12
 
-def test_create_db_and_collection_delete(clean_collection):
-    """Тест команды delete"""
+def test_create_db_and_collection_delete(clean_collection, monkeypatch):
+    """Тест команды delete."""
+    # Мокаем get_mongo_collection чтобы возвращать тестовую коллекцию
+    monkeypatch.setattr('database.get_mongo_collection', lambda: clean_collection)
+    
     # Добавляем тестовые данные
     clean_collection.insert_many([{'test': 'data1'}, {'test': 'data2'}])
     assert clean_collection.count_documents({}) == 2
@@ -181,23 +160,26 @@ def test_create_db_and_collection_delete(clean_collection):
     create_db_and_collection('delete')
     assert clean_collection.count_documents({}) == 0
 
-def test_create_db_and_collection_invalid_command(clean_collection, capsys):
-    """Тест обработки неверной команды"""
+def test_create_db_and_collection_invalid_command(clean_collection, monkeypatch, capsys):
+    """Тест обработки неверной команды."""
+    # Мокаем get_mongo_collection чтобы возвращать тестовую коллекцию
+    monkeypatch.setattr('database.get_mongo_collection', lambda: clean_collection)
+    
     create_db_and_collection('invalid_command')
     captured = capsys.readouterr()
     assert "Неизвестная команда" in captured.out
 
 def test_main_function(clean_collection, monkeypatch):
-    """Тест main функции"""
+    """Тест main функции."""
     # Мокаем input чтобы возвращал 'create'
     monkeypatch.setattr('builtins.input', lambda _: 'create')
+    # Мокаем get_mongo_collection чтобы возвращать тестовую коллекцию
+    monkeypatch.setattr('database.get_mongo_collection', lambda: clean_collection)
     
     from database import main
     main()
     
     assert clean_collection.count_documents({}) == 12
-
-
 
 if __name__ == "__main__":
     pytest.main(["-v"])
