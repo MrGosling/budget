@@ -97,6 +97,8 @@ def test_handle_add_expense_missing_fields(mock_handler):
     (2, 200, "Трата успешно добавлена"),
     (999, 422, "Неизвестная ошибка"),
 ])
+
+
 def test_handle_add_expense_result_codes(mock_handler, code, status, message):
     mock_handler.headers["Content-Length"] = "100"
     payload = {
